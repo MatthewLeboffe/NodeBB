@@ -1,84 +1,81 @@
-'use strict';
-
-const user = require('../user');
-const flags = require('../flags');
-
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const user = require("../user");
+const flags = require("../flags");
 const flagsApi = module.exports;
-
-flagsApi.create = async (caller, data) => {
+flagsApi.create = (caller, data) => __awaiter(void 0, void 0, void 0, function* () {
     const required = ['type', 'id', 'reason'];
     if (!required.every(prop => !!data[prop])) {
         throw new Error('[[error:invalid-data]]');
     }
-
     const { type, id, reason } = data;
-
-    await flags.validate({
+    yield flags.validate({
         uid: caller.uid,
         type: type,
         id: id,
     });
-
-    const flagObj = await flags.create(type, id, caller.uid, reason);
+    const flagObj = yield flags.create(type, id, caller.uid, reason);
     flags.notify(flagObj, caller.uid);
-
     return flagObj;
-};
-
-flagsApi.update = async (caller, data) => {
-    const allowed = await user.isPrivileged(caller.uid);
+});
+flagsApi.update = (caller, data) => __awaiter(void 0, void 0, void 0, function* () {
+    const allowed = yield user.isPrivileged(caller.uid);
     if (!allowed) {
         throw new Error('[[error:no-privileges]]');
     }
-
     const { flagId } = data;
     delete data.flagId;
-
-    await flags.update(flagId, caller.uid, data);
-    return await flags.getHistory(flagId);
-};
-
-flagsApi.appendNote = async (caller, data) => {
-    const allowed = await user.isPrivileged(caller.uid);
+    yield flags.update(flagId, caller.uid, data);
+    return yield flags.getHistory(flagId);
+});
+flagsApi.appendNote = (caller, data) => __awaiter(void 0, void 0, void 0, function* () {
+    const allowed = yield user.isPrivileged(caller.uid);
     if (!allowed) {
         throw new Error('[[error:no-privileges]]');
     }
     if (data.datetime && data.flagId) {
         try {
-            const note = await flags.getNote(data.flagId, data.datetime);
+            const note = yield flags.getNote(data.flagId, data.datetime);
             if (note.uid !== caller.uid) {
                 throw new Error('[[error:no-privileges]]');
             }
-        } catch (e) {
+        }
+        catch (e) {
             // Okay if not does not exist in database
             if (e.message !== '[[error:invalid-data]]') {
                 throw e;
             }
         }
     }
-    await flags.appendNote(data.flagId, caller.uid, data.note, data.datetime);
-    const [notes, history] = await Promise.all([
+    yield flags.appendNote(data.flagId, caller.uid, data.note, data.datetime);
+    const [notes, history] = yield Promise.all([
         flags.getNotes(data.flagId),
         flags.getHistory(data.flagId),
     ]);
     return { notes: notes, history: history };
-};
-
-flagsApi.deleteNote = async (caller, data) => {
-    const note = await flags.getNote(data.flagId, data.datetime);
+});
+flagsApi.deleteNote = (caller, data) => __awaiter(void 0, void 0, void 0, function* () {
+    const note = yield flags.getNote(data.flagId, data.datetime);
     if (note.uid !== caller.uid) {
         throw new Error('[[error:no-privileges]]');
     }
-
-    await flags.deleteNote(data.flagId, data.datetime);
-    await flags.appendHistory(data.flagId, caller.uid, {
+    yield flags.deleteNote(data.flagId, data.datetime);
+    yield flags.appendHistory(data.flagId, caller.uid, {
         notes: '[[flags:note-deleted]]',
         datetime: Date.now(),
     });
-
-    const [notes, history] = await Promise.all([
+    const [notes, history] = yield Promise.all([
         flags.getNotes(data.flagId),
         flags.getHistory(data.flagId),
     ]);
     return { notes: notes, history: history };
-};
+});
