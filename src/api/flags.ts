@@ -1,10 +1,33 @@
-import user = require ('../user');
-import flags = require('../flags');
+import user from '../user';
+import flags from '../flags';
 
+interface Caller {
+    uid: string | number;
+}
 
-const flagsApi = module.exports;
+interface FlagCreateData {
+    type: string;
+    id: string;
+    reason: string;
+}
 
-flagsApi.create = async (caller, data) => {
+interface FlagUpdateData {
+    flagId: string;
+    [key: string]: string;
+}
+
+interface FlagNoteData {
+    flagId: string;
+    datetime: Date;
+    note: string;
+}
+
+interface Note {
+    uid: number;
+    [key: string]: number;
+}
+
+async function create(caller: Caller, data: FlagCreateData): Promise<Note> {
     const required = ['type', 'id', 'reason'];
     if (!required.every(prop => !!data[prop])) {
         throw new Error('[[error:invalid-data]]');
@@ -18,13 +41,13 @@ flagsApi.create = async (caller, data) => {
         id: id,
     });
 
-    const flagObj = await flags.create(type, id, caller.uid, reason);
-    flags.notify(flagObj, caller.uid);
+    const flagObj: Note = await flags.create(type, id, caller.uid, reason);
+    void flags.notify(flagObj, caller.uid);
 
     return flagObj;
-};
+}
 
-flagsApi.update = async (caller, data) => {
+async function update(caller: Caller, data: FlagUpdateData): Promise<Note[]> {
     const allowed = await user.isPrivileged(caller.uid);
     if (!allowed) {
         throw new Error('[[error:no-privileges]]');
@@ -35,36 +58,35 @@ flagsApi.update = async (caller, data) => {
 
     await flags.update(flagId, caller.uid, data);
     return await flags.getHistory(flagId);
-};
+}
 
-flagsApi.appendNote = async (caller, data) => {
+async function appendNote(caller: Caller, data: FlagNoteData): Promise<{ notes: Note[], history: Note[] }> {
     const allowed = await user.isPrivileged(caller.uid);
     if (!allowed) {
         throw new Error('[[error:no-privileges]]');
     }
     if (data.datetime && data.flagId) {
         try {
-            const note = await flags.getNote(data.flagId, data.datetime);
+            const note: Note = await flags.getNote(data.flagId, data.datetime);
             if (note.uid !== caller.uid) {
                 throw new Error('[[error:no-privileges]]');
             }
         } catch (e) {
-            // Okay if not does not exist in database
             if (e.message !== '[[error:invalid-data]]') {
                 throw e;
             }
         }
     }
     await flags.appendNote(data.flagId, caller.uid, data.note, data.datetime);
-    const [notes, history] = await Promise.all([
+    const [notes, history]: [Note[], Note[]] = await Promise.all([
         flags.getNotes(data.flagId),
         flags.getHistory(data.flagId),
     ]);
-    return { notes: notes, history: history };
-};
+    return { notes, history };
+}
 
-flagsApi.deleteNote = async (caller, data) => {
-    const note = await flags.getNote(data.flagId, data.datetime);
+async function deleteNote(caller: Caller, data: FlagNoteData): Promise<{ notes: Note[], history: Note[] }> {
+    const note: Note = await flags.getNote(data.flagId, data.datetime);
     if (note.uid !== caller.uid) {
         throw new Error('[[error:no-privileges]]');
     }
@@ -72,12 +94,19 @@ flagsApi.deleteNote = async (caller, data) => {
     await flags.deleteNote(data.flagId, data.datetime);
     await flags.appendHistory(data.flagId, caller.uid, {
         notes: '[[flags:note-deleted]]',
-        datetime: Date.now(),
+        datetime: Date.now().toString(),
     });
 
-    const [notes, history] = await Promise.all([
+    const [notes, history]: [Note[], Note[]] = await Promise.all([
         flags.getNotes(data.flagId),
         flags.getHistory(data.flagId),
     ]);
-    return { notes: notes, history: history };
+    return { notes, history };
+}
+
+export {
+    create,
+    update,
+    appendNote,
+    deleteNote,
 };
