@@ -28,7 +28,7 @@ function create(caller, data) {
             id: id,
         });
         const flagObj = yield flags_1.default.create(type, id, caller.uid, reason);
-        void flags_1.default.notify(flagObj, caller.uid);
+        yield flags_1.default.notify(flagObj, caller.uid);
         return flagObj;
     });
 }
@@ -60,9 +60,10 @@ function appendNote(caller, data) {
                 }
             }
             catch (e) {
-                // Okay if not does not exist in database
-                if (e.message !== '[[error:invalid-data]]') {
-                    throw e;
+                if (e instanceof Error) {
+                    if (e.message !== '[[error:invalid-data]]') {
+                        throw e;
+                    }
                 }
             }
         }
