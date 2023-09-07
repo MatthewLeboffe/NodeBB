@@ -2,12 +2,13 @@ import user from '../user';
 import Flags from '../flags';
 
 
-// There are 7 linter bypasses in this file. This is because the calls are returning objects from src/flags.js that have not yet been translated to TS. 
-//sources:
-//https://www.typescriptlang.org/docs/handbook/typescript-from-scratch.html
-//https://www.geeksforgeeks.org/how-to-use-the-javascript-fetch-api-to-get-data/
-//https://stackoverflow.com/questions/54649465/how-to-do-try-catch-and-finally-statements-in-typescript
-//https://www.typescripttutorial.net/
+// There are 7 linter bypasses in this file. This is because the calls are returning objects from
+// src/flags.js that have not yet been translated to TS.
+// sources:
+// https://www.typescriptlang.org/docs/handbook/typescript-from-scratch.html
+// https://www.geeksforgeeks.org/how-to-use-the-javascript-fetch-api-to-get-data/
+// https://stackoverflow.com/questions/54649465/how-to-do-try-catch-and-finally-statements-in-typescript
+// https://www.typescripttutorial.net/
 
 interface Caller {
     uid: string | number;
