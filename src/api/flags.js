@@ -27,14 +27,17 @@ function create(caller, data) {
             type: type,
             id: id,
         });
+        // eslint-disable-next-line
         const flagObj = yield flags_1.default.create(type, id, caller.uid, reason);
-        void flags_1.default.notify(flagObj, caller.uid);
+        yield flags_1.default.notify(flagObj, caller.uid);
+        // eslint-disable-next-line
         return flagObj;
     });
 }
 exports.create = create;
 function update(caller, data) {
     return __awaiter(this, void 0, void 0, function* () {
+        // eslint-disable-next-line
         const allowed = yield user_1.default.isPrivileged(caller.uid);
         if (!allowed) {
             throw new Error('[[error:no-privileges]]');
@@ -42,27 +45,31 @@ function update(caller, data) {
         const { flagId } = data;
         delete data.flagId;
         yield flags_1.default.update(flagId, caller.uid, data);
+        // eslint-disable-next-line
         return yield flags_1.default.getHistory(flagId);
     });
 }
 exports.update = update;
 function appendNote(caller, data) {
     return __awaiter(this, void 0, void 0, function* () {
+        // eslint-disable-next-line
         const allowed = yield user_1.default.isPrivileged(caller.uid);
         if (!allowed) {
             throw new Error('[[error:no-privileges]]');
         }
         if (data.datetime && data.flagId) {
             try {
+                // eslint-disable-next-line
                 const note = yield flags_1.default.getNote(data.flagId, data.datetime);
                 if (note.uid !== caller.uid) {
                     throw new Error('[[error:no-privileges]]');
                 }
             }
             catch (e) {
-                // Okay if not does not exist in database
-                if (e.message !== '[[error:invalid-data]]') {
-                    throw e;
+                if (e instanceof Error) {
+                    if (e.message !== '[[error:invalid-data]]') {
+                        throw e;
+                    }
                 }
             }
         }
@@ -77,6 +84,7 @@ function appendNote(caller, data) {
 exports.appendNote = appendNote;
 function deleteNote(caller, data) {
     return __awaiter(this, void 0, void 0, function* () {
+        // eslint-disable-next-line
         const note = yield flags_1.default.getNote(data.flagId, data.datetime);
         if (note.uid !== caller.uid) {
             throw new Error('[[error:no-privileges]]');

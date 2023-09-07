@@ -1,5 +1,13 @@
 import user from '../user';
-import flags from '../flags';
+import Flags from '../flags';
+
+
+// There are 7 linter bypasses in this file. This is because the calls are returning objects from src/flags.js that have not yet been translated to TS. 
+//sources:
+//https://www.typescriptlang.org/docs/handbook/typescript-from-scratch.html
+//https://www.geeksforgeeks.org/how-to-use-the-javascript-fetch-api-to-get-data/
+//https://stackoverflow.com/questions/54649465/how-to-do-try-catch-and-finally-statements-in-typescript
+//https://www.typescripttutorial.net/
 
 interface Caller {
     uid: string | number;
@@ -35,19 +43,22 @@ async function create(caller: Caller, data: FlagCreateData): Promise<Note> {
 
     const { type, id, reason } = data;
 
-    await flags.validate({
+    await Flags.validate({
         uid: caller.uid,
         type: type,
         id: id,
     });
 
-    const flagObj: Note = await flags.create(type, id, caller.uid, reason);
-    void flags.notify(flagObj, caller.uid);
+    // eslint-disable-next-line
+    const flagObj: Note = await Flags.create(type, id, caller.uid, reason);
+    await Flags.notify(flagObj, caller.uid);
 
+    // eslint-disable-next-line
     return flagObj;
 }
 
 async function update(caller: Caller, data: FlagUpdateData): Promise<Note[]> {
+    // eslint-disable-next-line
     const allowed = await user.isPrivileged(caller.uid);
     if (!allowed) {
         throw new Error('[[error:no-privileges]]');
@@ -56,51 +67,57 @@ async function update(caller: Caller, data: FlagUpdateData): Promise<Note[]> {
     const { flagId } = data;
     delete data.flagId;
 
-    await flags.update(flagId, caller.uid, data);
-    return await flags.getHistory(flagId);
+    await Flags.update(flagId, caller.uid, data);
+    // eslint-disable-next-line
+    return await Flags.getHistory(flagId);
 }
 
 async function appendNote(caller: Caller, data: FlagNoteData): Promise<{ notes: Note[], history: Note[] }> {
+    // eslint-disable-next-line
     const allowed = await user.isPrivileged(caller.uid);
     if (!allowed) {
         throw new Error('[[error:no-privileges]]');
     }
     if (data.datetime && data.flagId) {
         try {
-            const note: Note = await flags.getNote(data.flagId, data.datetime);
+            // eslint-disable-next-line
+            const note: Note = await Flags.getNote(data.flagId, data.datetime);
             if (note.uid !== caller.uid) {
                 throw new Error('[[error:no-privileges]]');
             }
-        } catch (e) {
-            if (e.message !== '[[error:invalid-data]]') {
-                throw e;
+        } catch (e:unknown) {
+            if (e instanceof Error) {
+                if (e.message !== '[[error:invalid-data]]') {
+                    throw e;
+                }
             }
         }
     }
-    await flags.appendNote(data.flagId, caller.uid, data.note, data.datetime);
-    const [notes, history]: [Note[], Note[]] = await Promise.all([
-        flags.getNotes(data.flagId),
-        flags.getHistory(data.flagId),
-    ]);
+    await Flags.appendNote(data.flagId, caller.uid, data.note, data.datetime);
+    const [notes, history] = await Promise.all([
+        Flags.getNotes(data.flagId),
+        Flags.getHistory(data.flagId),
+    ]) as [Note[], Note[]];
     return { notes, history };
 }
 
 async function deleteNote(caller: Caller, data: FlagNoteData): Promise<{ notes: Note[], history: Note[] }> {
-    const note: Note = await flags.getNote(data.flagId, data.datetime);
+    // eslint-disable-next-line
+    const note: Note = await Flags.getNote(data.flagId, data.datetime);
     if (note.uid !== caller.uid) {
         throw new Error('[[error:no-privileges]]');
     }
 
-    await flags.deleteNote(data.flagId, data.datetime);
-    await flags.appendHistory(data.flagId, caller.uid, {
+    await Flags.deleteNote(data.flagId, data.datetime);
+    await Flags.appendHistory(data.flagId, caller.uid, {
         notes: '[[flags:note-deleted]]',
         datetime: Date.now().toString(),
     });
 
-    const [notes, history]: [Note[], Note[]] = await Promise.all([
-        flags.getNotes(data.flagId),
-        flags.getHistory(data.flagId),
-    ]);
+    const [notes, history] = await Promise.all([
+        Flags.getNotes(data.flagId),
+        Flags.getHistory(data.flagId),
+    ]) as [Note[], Note[]];
     return { notes, history };
 }
 
